@@ -1,0 +1,114 @@
+-- Drop tables if they exist to avoid conflicts
+DROP TABLE IF EXISTS Issuance;
+DROP TABLE IF EXISTS Transactions;
+DROP TABLE IF EXISTS Members;
+DROP TABLE IF EXISTS Books;
+
+
+-- Create Books table
+CREATE TABLE Books (
+    book_id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    author VARCHAR(255) NOT NULL DEFAULT 'Geronimo Stilton',
+    genre VARCHAR(100) NOT NULL,
+    isbn VARCHAR(50) UNIQUE NOT NULL,
+    total_copies INT NOT NULL DEFAULT 1,
+    available_copies INT NOT NULL DEFAULT 1,
+    added_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_available_copies CHECK (available_copies <= total_copies)
+);
+
+-- Insert book records
+INSERT INTO Books (title, genre, isbn, total_copies, available_copies) VALUES
+('The Kingdom of Fantasy', 'Fantasy', '9780545980258', 10, 8),
+('The Quest for Paradise', 'Adventure', '9780545253079', 8, 6),
+('The Amazing Voyage', 'Fantasy', '9780545307710', 7, 7),
+('The Dragon Prophecy', 'Fantasy', '9780545393515', 6, 3),
+('The Enchanted Charms', 'Mystery', '9780545656047', 5, 5),
+('The Phoenix of Destiny', 'Fantasy', '9780545829076', 4, 2),
+('The Volcano of Fire', 'Adventure', '9780545556255', 9, 7),
+('The Hour of Magic', 'Fantasy', '9781338032910', 6, 6),
+('The Secret of Cacklefur Castle', 'Mystery', '9780439691390', 7, 5),
+('A Fabumouse Vacation for Geronimo', 'Comedy', '9780439559690', 5, 4);
+
+-- Create Members table
+CREATE TABLE Members (
+    member_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    phone VARCHAR(20) UNIQUE NOT NULL,
+    membership_type ENUM('Standard', 'Premium') NOT NULL DEFAULT 'Standard',
+    address TEXT NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert members
+INSERT INTO Members (name, email, phone, membership_type, address, password) VALUES
+('Alice Johnson', 'alice@example.com', '1234567890', 'Premium', '123 Library Lane, NY', 'securepass1'),
+('Bob Smith', 'bob@example.com', '9876543210', 'Standard', '456 Reading Rd, CA', 'mypassword2'),
+('Charlie Brown', 'charlie@example.com', '5556667777', 'Standard', '789 Book St, TX', 'charliepass3'),
+('David Warner', 'david@example.com', '4445556666', 'Premium', '321 Novel Ave, FL', 'davidsecure'),
+('Emma Watson', 'emma@example.com', '9998887777', 'Standard', '555 Story Blvd, IL', 'emma123');
+
+-- Create Issuance table
+CREATE TABLE Issuance (
+    issuance_id INT AUTO_INCREMENT PRIMARY KEY,
+    member_id INT NOT NULL,
+    book_id INT NOT NULL,
+    issued_date DATE DEFAULT (CURDATE()),
+    due_date DATE NOT NULL,
+    returned_date DATE DEFAULT NULL,
+    FOREIGN KEY (member_id) REFERENCES Members(member_id) ON DELETE CASCADE,
+    FOREIGN KEY (book_id) REFERENCES Books(book_id) ON DELETE CASCADE
+);
+
+-- Insert issuance records
+INSERT INTO Issuance (member_id, book_id, issued_date, due_date) VALUES
+(1, 1, '2024-02-10', '2024-02-25'),
+(2, 3, '2024-02-12', '2024-02-26'),
+(3, 5, '2024-02-15', '2024-02-28'),
+(4, 7, '2024-02-16', '2024-03-02'),
+(5, 9, '2024-02-18', '2024-03-04');
+
+-- Create Transactions table
+CREATE TABLE Transactions (
+    transaction_id INT AUTO_INCREMENT PRIMARY KEY,
+    member_id INT NOT NULL,
+    book_id INT NOT NULL,
+    borrow_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    return_date TIMESTAMP NULL,
+    status ENUM('borrowed', 'returned') DEFAULT 'borrowed',
+    FOREIGN KEY (member_id) REFERENCES Members(member_id) ON DELETE CASCADE,
+    FOREIGN KEY (book_id) REFERENCES Books(book_id) ON DELETE CASCADE
+);
+
+-- Query 1: List books that are NOT currently issued
+SELECT title AS Book_Name, author AS Author
+FROM Books 
+WHERE book_id NOT IN (SELECT DISTINCT book_id FROM Issuance WHERE returned_date IS NULL);
+
+-- Query 2: List active issued books with member details
+SELECT 
+    m.name AS Member_Name, 
+    b.title AS Book_Name, 
+    i.issued_date AS Issued_Date, 
+    i.due_date AS Target_Return_Date, 
+    b.author AS Author
+FROM Issuance i
+JOIN Members m ON i.member_id = m.member_id
+JOIN Books b ON i.book_id = b.book_id
+WHERE i.returned_date IS NULL;
+
+-- Query 3: Find the top 10 most borrowed books
+SELECT 
+    b.title AS Book_Name, 
+    COUNT(i.book_id) AS Times_Borrowed, 
+    COUNT(DISTINCT i.member_id) AS Unique_Borrowers
+FROM Issuance i
+JOIN Books b ON i.book_id = b.book_id
+GROUP BY i.book_id
+ORDER BY Times_Borrowed DESC
+LIMIT 10;
+
+SELECT * FROM Issuance WHERE issuance_id = 1;

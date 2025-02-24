@@ -1,3 +1,8 @@
+--Create database(first time)
+CREATE libraryDB;
+USE libraryDB
+
+
 -- Drop tables if they exist to avoid conflicts
 DROP TABLE IF EXISTS Issuance;
 DROP TABLE IF EXISTS Transactions;

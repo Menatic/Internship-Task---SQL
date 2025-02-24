@@ -111,4 +111,3 @@ GROUP BY i.book_id
 ORDER BY Times_Borrowed DESC
 LIMIT 10;
 
-SELECT * FROM Issuance WHERE issuance_id = 1;
